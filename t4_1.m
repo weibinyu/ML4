@@ -3,30 +3,27 @@ clear;
 close all;
 load('football.mat');
 
-% A = cell2mat(img);
-% A = reshape(A,[60000,784])/255;
-% A = A(1:1000,:);
-
-[X,y] = bkmeans(football_X,1,2);
-gscatter(X(:,1),X(:,2),y);
+res = bkmeans(football_X,5,10);
+gscatter(res(:,1),res(:,2),res(:,3));
 
 %% BKmeans
-function [X_tmp,y_tmp] = bkmeans(X,k,iter)
-X_tmp = [];
+function res = bkmeans(X,k,iter)
+res = [X zeros(size(X,1),1)];
+positions = [1 size(X,1)];
 for i = 1:k
     bestSSE = 9999999;
     bestLabel = [];
     for n = 1:iter
-        [sse,label] = Kmeans(X,i);
+        [sse,label] = Kmeans(res(positions(1):positions(2),:),i*2);
         if sse < bestSSE
             bestSSE = sse;
             bestLabel = label;
         end
     end
-    
-%     X_tmp = sort([X bestLabel],size(X_tmp,2)+1);
     y_tmp = bestLabel;
-    X_tmp = X;
+    res(positions(1):positions(2),3) = y_tmp;
+    res = sortrows(res,size(res,2));
+    positions = pickC(res);
 end
 end
 
@@ -43,12 +40,14 @@ function [sse,label] = Kmeans(X,c)
     while oldSSE > newSSE
         oldSSE = newSSE;
         d = [];
+        n=c;
         for i=1:2
-            id = find(Y==i);
+            id = find(Y==n);
             C = X(id,:);
             m = mean(C,1);
             dis = abs(X-m);
             d = [d,sum(dis,2)];
+            n=n+1;
         end
         for n = 1:size(d,1)
             if d(n,1) < d(n,2)
@@ -76,4 +75,20 @@ sse=0;
         end
         sse=sse+sum(total);
     end
+end
+function pos = pickC(X)
+uni = unique(X(:,3));
+biggestC = 0;
+pos = 0;
+start = 1;
+stop = 0;
+for i = 1:size(uni,1)
+    n = sum(X(:,3) == uni(i));
+    stop = stop + n;
+    if biggestC < n
+        biggestC = n;
+        pos = [start stop];
+    end
+    start = start + stop;
+end
 end

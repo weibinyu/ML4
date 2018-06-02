@@ -1,10 +1,11 @@
 clc
 clear;
 close all;
-load('football.mat');
-
-res = bkmeans(football_X,5,10);
-gscatter(res(:,1),res(:,2),res(:,3));
+load('Iris.mat');
+X = table2array(Iris(:,1:4));
+Y = table2array(Iris(:,5));
+res = bkmeans(X,2,10);
+gscatter(res(:,1),res(:,2),res(:,end));
 
 %% BKmeans
 function res = bkmeans(X,k,iter)
@@ -21,7 +22,7 @@ for i = 1:k
         end
     end
     y_tmp = bestLabel;
-    res(positions(1):positions(2),3) = y_tmp;
+    res(positions(1):positions(2),size(res,2)) = y_tmp;
     res = sortrows(res,size(res,2));
     positions = pickC(res);
 end
@@ -77,13 +78,14 @@ sse=0;
     end
 end
 function pos = pickC(X)
-uni = unique(X(:,3));
+Y=X(:,size(X,2));
+uni = unique(Y);
 biggestC = 0;
 pos = 0;
 start = 1;
 stop = 0;
 for i = 1:size(uni,1)
-    n = sum(X(:,3) == uni(i));
+    n = sum(X(:,size(X,2)) == uni(i));
     stop = stop + n;
     if biggestC < n
         biggestC = n;

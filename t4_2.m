@@ -1,95 +1,59 @@
 clc
 clear;
 close all;
-load('dataFeature.mat');
-X = table2array(features(1:200,:));
-mat = sammon(X,1000,100,1);
+load('iris.mat');
+ X = Iris;
+ B = unique(X,'rows');
+ X = table2array(B(:,1:4));
+ y = table2array(B(:,5));
 
-function sam = sammon(X,iter,e,a)
-    bestCost = 9999999;
-    limit = size(X,2);
-    bestY=[];
+ 
+Y = randi([1,1000],size(X,1), 2);
+mat = sammon(X,Y,4000,0.00001,0.1);
+scatter(mat(:,1),mat(:,2));
+
+function Y = sammon(X, Y, iter, e, a)   
+    disX = disM(X);
+    disY = disM(Y);
+    C = sum(disX(:))/2;
+    cost = stress(disY,disX,C);
     for i = 1:iter
-        r = randi([1 limit],1,2);
-        while r(1)==r(2)
-            r = randi([1 limit],1,2);
-        end
-        Y = [X(:,r(1)) X(:,r(2))];
-        currentCost = cost(X,Y);
-        if currentCost < bestCost
-            bestCost = currentCost;
-            bestY = Y;
-        end
-        if e<bestCost
-          	 break
+        if cost>e
+            delta = findD(Y, disY, disX,C);
+            Y = Y + a.* delta;
+            disY = disM(Y);
+            cost= stress(disY,disX,C);
         end
     end
-    
-    o = one(X,bestY);
-    t = two(X,bestY);
-    tri = o/t;
-    sam = bestCost;
 end
 
-function t = two(X,Y)
-    in_sum = 0;
-    out_sum = 0;
-    for i = 1:size(X,1)
-        for ii = 1:size(X,1)
-            if i ~= ii
-                d = (Y(i,:)-Y(ii,:));
-                d = d.^2;
-                d = sqrt(sum(d,2));
-                b= (X(i,:)-X(ii,:));
-                b=b.^2;
-                b=sqrt(sum(b,2));
-                out2 = (1/(b-d))*((b-d)-(((Y(i,:)-Y(ii,:)).^2)/d)*...
-                    (1+((b-d)/d)));
-                out_sum = out_sum + out2;
-                in_sum = in_sum+b;
-            end
-        end
+function dis = disM(X)
+ dis =zeros(size(X,1),size(X,1)); 
+    for i =1:size(X,1)
+        dis(i,:) = sqrt(sum(abs((X(i,:)-X)).^2,2));
     end
-    t = (-2/in_sum)*out_sum;
 end
 
-function o = one(X,Y)
-    out_sum = 0;
-    in_sum =0;
-    for i = 1:size(X,1)
-        for ii = 1:size(X,1)
-            if i ~= ii
-                d = (Y(i,:)-Y(ii,:));
-                d = d.^2;
-                d = sqrt(sum(d,2));
-                b= (X(i,:)-X(ii,:));
-                b=b.^2;
-                b=sqrt(sum(b,2));
-                out1 = ((b-d)/(b*d))*(Y(i,:)-Y(ii,:));
-                out_sum = out_sum + out1;
-                in_sum = in_sum+b;
-            end
-        end
-    end
-    o = (-2/in_sum)*out_sum;
+function cost = stress(disY,disX,C)
+    t=(disY-disX).^2./disX;
+    cost = sum(t(~isnan(t)))/(2*C);
 end
 
-function cos = cost(X,Y)
-    out_sum = 0;
-    in_sum = 0;
-    n = 2;
-    for i = 1:size(X,1)
-        for ii = n:size(X,1)
-            d = (Y(i,:)-Y(ii,:));
-            d = d.^2;
-            d= sqrt(sum(d,2));
-            b= (X(i,:)-X(ii,:));
-            b=b.^2;
-            b=sqrt(sum(b,2));
-            out_sum = out_sum + (((d - b)^2)/ b);
-            in_sum = in_sum+b;
-        end
-        n=n+1;
+function delta = findD(Y, disY, disX,C)
+    n=size(disX,1);
+    f=[0 0]; 
+    s=[0 0];
+    delta=zeros(n,2);
+    for i=1:n
+        id=setdiff(1:n,i);
+        dis=Y-Y(i,:);
+        dis=dis(id,:);
+        d=disY(id,i);
+        D=disX(id,i);
+        t=(D-d)./(d.*D);
+        f=f+(-2/C)*sum(t.*dis );
+        s=s+(-2/C)*sum(  ((D-d)-(dis.^2)./d.*(1.+t)) ./(D.*d));
+        delta(i,:)=f./s;
     end
-    cos= (1/in_sum)*out_sum;
+
 end
